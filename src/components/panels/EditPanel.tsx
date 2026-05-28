@@ -1,12 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useDeckStore } from "@/store/deck-store";
 import type {
-  SlideElement, SlideType, HeadingElement, BodyTextElement, QuoteElement,
+  SlideElement, SlideType, SlideColumn, HeadingElement, BodyTextElement, QuoteElement,
   StatElement, ImageElement, DividerElement, SpacerElement, CardElement,
   IconTextElement, BulletListElement, NumberedListElement,
 } from "@/types/deck";
-import { Trash, ArrowUp, ArrowDown, Plus, Minus, Sparkle } from "@phosphor-icons/react";
+import { Trash, Plus, Minus, Sparkle, DotsSixVertical } from "@phosphor-icons/react";
 import { AVAILABLE_ICONS } from "../slides/ElementRenderer";
 
 export function EditPanel() {
@@ -16,7 +17,8 @@ export function EditPanel() {
   const updateSlide = useDeckStore((s) => s.updateSlide);
   const updateElement = useDeckStore((s) => s.updateElement);
   const deleteElement = useDeckStore((s) => s.deleteElement);
-  const moveElement = useDeckStore((s) => s.moveElement);
+  const moveElementToPosition = useDeckStore((s) => s.moveElementToPosition);
+  const setActiveElement = useDeckStore((s) => s.setActiveElement);
 
   if (!project || !activeSlideId) return null;
 
@@ -24,10 +26,11 @@ export function EditPanel() {
   if (!slide) return null;
 
   let activeElement: SlideElement | null = null;
+  let activeColumn: SlideColumn | null = null;
   if (activeElementId) {
     for (const col of slide.columnData) {
       const found = col.elements.find((el) => el.id === activeElementId);
-      if (found) { activeElement = found; break; }
+      if (found) { activeElement = found; activeColumn = col; break; }
     }
   }
 
@@ -40,13 +43,21 @@ export function EditPanel() {
       </div>
 
       <div className="flex-1 p-4 flex flex-col gap-4">
-        {activeElement ? (
-          <ElementEditor
-            element={activeElement}
-            onUpdate={(updates) => updateElement(activeElement!.id, updates)}
-            onDelete={() => deleteElement(activeElement!.id)}
-            onMove={(dir) => moveElement(activeElement!.id, dir)}
-          />
+        {activeElement && activeColumn ? (
+          <>
+            <LayerList
+              column={activeColumn}
+              activeElementId={activeElementId!}
+              onSelect={(id) => setActiveElement(id)}
+              onDelete={(id) => deleteElement(id)}
+              onReorder={(elementId, newIndex) => moveElementToPosition(elementId, activeColumn!.id, newIndex)}
+            />
+            <ElementEditor
+              element={activeElement}
+              onUpdate={(updates) => updateElement(activeElement!.id, updates)}
+              onDelete={() => deleteElement(activeElement!.id)}
+            />
+          </>
         ) : (
           <SlideEditor
             slide={slide}
@@ -170,31 +181,147 @@ function SlideEditor({
   );
 }
 
+// ─── Layer List (Photoshop-style) ───
+
+const LAYER_LABELS: Record<SlideElement["type"], string> = {
+  heading: "Heading",
+  "body-text": "Body Text",
+  quote: "Quote",
+  stat: "Stat",
+  "bullet-list": "Bullet List",
+  "numbered-list": "Numbered List",
+  image: "Image",
+  card: "Card",
+  chart: "Chart",
+  "person-card": "Person",
+  "icon-text": "Icon + Text",
+  divider: "Divider",
+  spacer: "Spacer",
+};
+
+function LayerList({
+  column,
+  activeElementId,
+  onSelect,
+  onDelete,
+  onReorder,
+}: {
+  column: SlideColumn;
+  activeElementId: string;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+  onReorder: (elementId: string, newIndex: number) => void;
+}) {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+
+  return (
+    <div className="flex flex-col border border-stroke-1 bg-fill-1 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center px-2 py-1.5 bg-fill-2 border-b border-stroke-1">
+        <span className="text-ui-xs font-medium text-text-3 uppercase tracking-wider">Layers</span>
+      </div>
+
+      {/* Layer rows — listed top to bottom (first = top of slide) */}
+      <div className="flex flex-col">
+        {column.elements.map((el, i) => (
+          <div key={el.id}>
+            {/* Drop indicator */}
+            {dragId && dropIndex === i && (
+              <div className="h-0.5 bg-accent-primary mx-1" />
+            )}
+            <div
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/plain", el.id);
+                e.dataTransfer.effectAllowed = "move";
+                setDragId(el.id);
+              }}
+              onDragEnd={() => { setDragId(null); setDropIndex(null); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                setDropIndex(i);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const movedId = e.dataTransfer.getData("text/plain");
+                if (movedId && movedId !== el.id) {
+                  onReorder(movedId, i);
+                }
+                setDragId(null);
+                setDropIndex(null);
+              }}
+              onClick={() => onSelect(el.id)}
+              className={`flex items-center gap-1.5 px-1.5 py-1.5 cursor-pointer transition-colors group ${
+                el.id === activeElementId
+                  ? "bg-alt-2 text-text-1"
+                  : "text-text-2 hover:bg-alt-1 hover:text-text-1"
+              } ${dragId === el.id ? "opacity-40" : ""}`}
+            >
+              {/* Drag handle */}
+              <span className="shrink-0 text-text-3 cursor-grab active:cursor-grabbing opacity-40 group-hover:opacity-100 transition-opacity">
+                <DotsSixVertical size={12} weight="bold" />
+              </span>
+
+              {/* Element name */}
+              <span className="flex-1 text-ui-xs truncate">
+                {LAYER_LABELS[el.type] ?? el.type}
+              </span>
+
+              {/* Delete */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(el.id);
+                }}
+                className="shrink-0 w-5 h-5 flex items-center justify-center text-text-3 opacity-0 group-hover:opacity-100 hover:text-status-error transition-all"
+                title="Delete"
+              >
+                <Trash size={11} />
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {/* Drop indicator at end */}
+        {dragId && dropIndex === column.elements.length && (
+          <div className="h-0.5 bg-accent-primary mx-1" />
+        )}
+
+        {/* Drop target for end of list */}
+        {dragId && (
+          <div
+            className="h-4"
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDropIndex(column.elements.length);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              const movedId = e.dataTransfer.getData("text/plain");
+              if (movedId) onReorder(movedId, column.elements.length);
+              setDragId(null);
+              setDropIndex(null);
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Element Editor ───
 
 function ElementEditor({
-  element, onUpdate, onDelete, onMove,
+  element, onUpdate, onDelete,
 }: {
   element: SlideElement;
   onUpdate: (updates: Partial<SlideElement>) => void;
   onDelete: () => void;
-  onMove: (dir: "up" | "down") => void;
 }) {
   return (
     <div className="flex flex-col gap-4">
-      {/* Actions bar */}
-      <div className="flex items-center gap-1">
-        <button onClick={() => onMove("up")} className="icon-btn" title="Move up"><ArrowUp size={14} /></button>
-        <button onClick={() => onMove("down")} className="icon-btn" title="Move down"><ArrowDown size={14} /></button>
-        <div className="flex-1" />
-        <button onClick={onDelete} className="icon-btn text-status-error" title="Delete"><Trash size={14} /></button>
-      </div>
-
-      {/* Type label */}
-      <div className="text-ui-xs text-text-3 uppercase tracking-wider">
-        {element.type}
-      </div>
-
       {/* Type-specific fields */}
       {element.type === "heading" && <HeadingFields element={element} onUpdate={onUpdate as (u: Partial<HeadingElement>) => void} />}
       {element.type === "body-text" && <BodyTextField element={element} onUpdate={onUpdate as (u: Partial<BodyTextElement>) => void} />}

@@ -50,6 +50,7 @@ export interface LazerSlidesBridge {
   updateElement: (elementId: string, updates: Record<string, unknown>) => void;
   deleteElement: (elementId: string) => void;
   moveElement: (elementId: string, direction: "up" | "down") => void;
+  moveElementToPosition: (elementId: string, targetColumnId: string, targetIndex: number) => void;
 
   // Slide type & columns
   changeSlideType: (slideId: string, newType: "cover" | "title" | "column" | "end") => void;
@@ -132,7 +133,8 @@ The user can click ✦ sparkle buttons on text fields to request your help.
   addElement(columnId, type)        → Add element to column
   updateElement(elementId, updates) → Update element fields
   deleteElement(elementId)          → Remove element
-  moveElement(elementId, "up"|"down") → Reorder element
+  moveElement(elementId, "up"|"down") → Reorder element within column
+  moveElementToPosition(elementId, columnId, index) → Move element to specific position/column
 
 📝 ELEMENT UPDATE FIELDS
   heading:       { text, style: "h1"|"h2"|"h3"|"display-mega"|"display-hero"|"display-title", showBadge, badgeText }
@@ -296,6 +298,8 @@ export function initClaudeBridge() {
       useDeckStore.getState().updateElement(id, updates as never),
     deleteElement: (id) => useDeckStore.getState().deleteElement(id),
     moveElement: (id, dir) => useDeckStore.getState().moveElement(id, dir),
+    moveElementToPosition: (id, colId, idx) =>
+      useDeckStore.getState().moveElementToPosition(id, colId, idx),
 
     // ─── Mode ───
     setMode: (mode) => useDeckStore.getState().setMode(mode),

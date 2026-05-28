@@ -136,6 +136,7 @@ interface EditorState {
   updateElement: (elementId: string, updates: Partial<SlideElement>) => void;
   deleteElement: (elementId: string) => void;
   moveElement: (elementId: string, direction: 'up' | 'down') => void;
+  moveElementToPosition: (elementId: string, targetColumnId: string, targetIndex: number) => void;
   setActiveElement: (elementId: string | null) => void;
 
   // Actions — UI
@@ -301,13 +302,36 @@ export const useDeckStore = create<EditorState>((set, get) => ({
     const slides = project.slides.map(s => {
       if (s.id !== slideId) return s;
       const columnData = [...s.columnData];
+
+      // Add empty columns if expanding
       while (columnData.length < columns) {
         columnData.push(createColumn());
       }
+
+      // If reducing, merge removed columns' elements into the last kept column
+      if (columnData.length > columns) {
+        const kept = columnData.slice(0, columns);
+        const removed = columnData.slice(columns);
+        const orphanedElements = removed.flatMap(col => col.elements);
+        if (orphanedElements.length > 0) {
+          kept[columns - 1] = {
+            ...kept[columns - 1],
+            elements: [...kept[columns - 1].elements, ...orphanedElements],
+          };
+        }
+        return {
+          ...s,
+          columns,
+          columnData: kept,
+          columnWidths: defaultColumnWidths(columns),
+          layoutChosen: true,
+        };
+      }
+
       return {
         ...s,
         columns,
-        columnData: columnData.slice(0, columns),
+        columnData,
         columnWidths: defaultColumnWidths(columns),
         layoutChosen: true,
       };
@@ -457,6 +481,54 @@ export const useDeckStore = create<EditorState>((set, get) => ({
       }),
     }));
     set({ project: { ...project, slides } });
+  },
+
+  moveElementToPosition: (elementId: string, targetColumnId: string, targetIndex: number) => {
+    const { project } = get();
+    if (!project) return;
+
+    // Find the element and its source column
+    let movedElement: SlideElement | null = null;
+    let sourceColumnId: string | null = null;
+
+    for (const slide of project.slides) {
+      for (const col of slide.columnData) {
+        const el = col.elements.find(e => e.id === elementId);
+        if (el) {
+          movedElement = el;
+          sourceColumnId = col.id;
+          break;
+        }
+      }
+      if (movedElement) break;
+    }
+
+    if (!movedElement || !sourceColumnId) return;
+
+    const slides = project.slides.map(s => ({
+      ...s,
+      columnData: s.columnData.map(col => {
+        let elements = [...col.elements];
+
+        // Remove from source column
+        if (col.id === sourceColumnId) {
+          elements = elements.filter(e => e.id !== elementId);
+        }
+
+        // Insert into target column at position
+        if (col.id === targetColumnId) {
+          // If same column, account for removal shifting indices
+          const adjustedIndex = col.id === sourceColumnId
+            ? Math.min(targetIndex, elements.length)
+            : targetIndex;
+          elements.splice(adjustedIndex, 0, movedElement!);
+        }
+
+        return { ...col, elements };
+      }),
+    }));
+
+    set({ project: { ...project, slides }, activeElementId: elementId });
   },
 
   setActiveElement: (elementId: string | null) =>

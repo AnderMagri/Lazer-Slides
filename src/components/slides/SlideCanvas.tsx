@@ -5,6 +5,30 @@ import { SlideRenderer } from "./SlideRenderer";
 import { ColumnPicker } from "../ui/ColumnPicker";
 import { useSlideScale } from "@/hooks/useSlideScale";
 
+// ─── Per-column width options ───
+const TWO_COL_OPTIONS = [50, 70] as const;
+const THREE_COL_OPTIONS = [33, 50] as const;
+
+function computeWidths(columns: number, targetCol: number, targetWidth: number): number[] {
+  if (columns === 2) {
+    const other = 100 - targetWidth;
+    return targetCol === 0 ? [targetWidth, other] : [other, targetWidth];
+  }
+  // 3 columns — give targetCol the chosen width, split remainder equally
+  const remainder = 100 - targetWidth;
+  const each = Math.round(remainder / (columns - 1));
+  const widths = Array.from({ length: columns }, (_, i) =>
+    i === targetCol ? targetWidth : each
+  );
+  // Fix rounding so they sum to 100
+  const diff = 100 - widths.reduce((a, b) => a + b, 0);
+  if (diff !== 0) {
+    const fixIdx = targetCol === 0 ? 1 : 0;
+    widths[fixIdx] += diff;
+  }
+  return widths;
+}
+
 export function SlideCanvas() {
   const project = useDeckStore((s) => s.project);
   const activeSlideId = useDeckStore((s) => s.activeSlideId);
@@ -18,40 +42,49 @@ export function SlideCanvas() {
 
   const showPicker = slide.type === "column" && !slide.layoutChosen;
 
-  // Column width presets — only for 2-column slides
-  const showColumnPresets = slide.type === "column" && slide.columns === 2 && slide.layoutChosen;
-  const widths = slide.columnWidths || [50, 50];
-
-  const presets: { label: string; widths: number[] }[] = [
-    { label: "50 / 50", widths: [50, 50] },
-    { label: "70 / 30", widths: [70, 30] },
-    { label: "30 / 70", widths: [30, 70] },
-  ];
-
-  const activePreset = presets.findIndex(
-    (p) => p.widths[0] === widths[0] && p.widths[1] === widths[1]
+  // Column width tabs — for multi-column slides
+  const showColumnTabs =
+    slide.type === "column" && slide.columns >= 2 && slide.layoutChosen;
+  const widths = slide.columnWidths || Array.from(
+    { length: slide.columns },
+    () => Math.round(100 / slide.columns)
   );
+  const options = slide.columns === 2 ? TWO_COL_OPTIONS : THREE_COL_OPTIONS;
 
   return (
     <div ref={containerRef} className="flex-1 flex flex-col items-center justify-center overflow-hidden">
-      {/* Column width presets (A) */}
-      {showColumnPresets && (
+      {/* Per-column width tabs */}
+      {showColumnTabs && (
         <div
-          className="flex items-center gap-1 mb-3 shrink-0"
+          className="flex gap-3 mb-2 shrink-0 px-6"
           style={{ width: slideWidth * scale }}
         >
-          {presets.map((preset, i) => (
-            <button
-              key={preset.label}
-              onClick={() => updateSlide(slide.id, { columnWidths: [...preset.widths] })}
-              className={`flex-1 h-7 text-ui-xs font-medium transition-colors ${
-                activePreset === i
-                  ? "bg-accent-primary text-text-on-brand"
-                  : "bg-fill-2 border border-stroke-1 text-text-3 hover:text-text-1 hover:bg-alt-1"
-              }`}
+          {widths.map((w, colIndex) => (
+            <div
+              key={colIndex}
+              className="flex items-center justify-center gap-0.5 h-7"
+              style={{ width: `${w}%`, flexBasis: `${w}%` }}
             >
-              {preset.label}
-            </button>
+              {options.map((opt) => {
+                const isActive = w === opt;
+                return (
+                  <button
+                    key={opt}
+                    onClick={() => {
+                      const newWidths = computeWidths(slide.columns, colIndex, opt);
+                      updateSlide(slide.id, { columnWidths: newWidths });
+                    }}
+                    className={`h-6 px-2 text-[11px] font-medium transition-all ${
+                      isActive
+                        ? "bg-accent-primary text-text-on-brand"
+                        : "bg-fill-2 border border-stroke-1 text-text-3 hover:text-text-1 hover:bg-alt-1"
+                    }`}
+                  >
+                    {opt}%
+                  </button>
+                );
+              })}
+            </div>
           ))}
         </div>
       )}

@@ -46,9 +46,9 @@ export function SlidePanel() {
             tabIndex={0}
             onClick={() => setActiveSlide(slide.id)}
             onKeyDown={(e) => e.key === "Enter" && setActiveSlide(slide.id)}
-            className={`group relative flex flex-col rounded-lg overflow-hidden transition-all cursor-pointer ${
+            className={`group relative flex flex-col rounded-sm overflow-hidden transition-all cursor-pointer ${
               activeSlideId === slide.id
-                ? "ring-2 ring-accent-primary"
+                ? "ring-2 ring-stroke-2"
                 : "ring-1 ring-stroke-1 hover:ring-stroke-2"
             }`}
           >
@@ -121,14 +121,14 @@ export function SlidePanel() {
       <div className="relative p-2 border-t border-stroke-1 overflow-visible">
         <button
           onClick={() => setShowAddMenu(!showAddMenu)}
-          className="flex items-center justify-center gap-2 w-full h-8 rounded-lg border border-dashed border-stroke-1 text-ui-xs text-text-2 hover:border-accent-primary hover:text-accent-primary transition-colors"
+          className="flex items-center justify-center gap-2 w-full h-8 rounded-sm border border-dashed border-stroke-1 text-ui-xs text-text-2 hover:border-accent-primary hover:text-accent-primary transition-colors"
         >
           <Plus size={14} />
           Add Slide
         </button>
 
         {showAddMenu && (
-          <div className="absolute bottom-full left-2 right-2 mb-1 bg-fill-3 border border-stroke-1 rounded-lg shadow-elevation-2 overflow-hidden z-20">
+          <div className="absolute bottom-full left-2 right-2 mb-1 bg-fill-3 border border-stroke-1 rounded-sm shadow-elevation-2 overflow-hidden z-20">
             {(["cover", "title", "column", "end"] as SlideType[]).map(
               (type) => (
                 <button

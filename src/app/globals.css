@@ -203,7 +203,7 @@ body {
 .input-field {
   width: 100%;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: 4px;
   background: var(--fill-1);
   border: 1px solid var(--stroke-1);
   color: var(--text-1);
@@ -213,7 +213,7 @@ body {
   transition: border-color 0.15s;
 }
 .input-field:focus {
-  border-color: var(--accent-primary);
+  border-color: var(--stroke-2);
 }
 .input-field::placeholder {
   color: var(--text-3);
@@ -225,7 +225,7 @@ body {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: 4px;
   color: var(--text-2);
   transition: all 0.15s;
 }

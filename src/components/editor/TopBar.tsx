@@ -41,7 +41,7 @@ export function TopBar() {
             <ArrowLeft size={18} />
           </button>
           <div
-            className="w-5 h-5 rounded-md shrink-0"
+            className="w-5 h-5 rounded-sm shrink-0"
             style={{ background: "var(--lazer-gradient)" }}
           />
           <span className="text-ui-md font-medium text-text-1 truncate max-w-[200px]">

@@ -86,7 +86,10 @@ export function PresentMode() {
             }}
             className="overflow-hidden"
           >
-            <SlideRenderer slide={slides[currentIndex]} />
+            <SlideRenderer
+              slide={slides[currentIndex]}
+              onNavigateToSlide={(index) => setCurrentIndex(index)}
+            />
           </div>
         </motion.div>
       </AnimatePresence>
@@ -103,7 +106,7 @@ export function PresentMode() {
             e.stopPropagation();
             setMode("editor");
           }}
-          className="px-2 py-1 rounded bg-alt-2 cursor-pointer"
+          className="px-2 py-1 rounded-sm bg-alt-2 cursor-pointer"
         >
           ESC to exit
         </button>
