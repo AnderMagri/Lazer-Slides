@@ -91,6 +91,9 @@ interface EditorState {
   // Project
   project: DeckProject | null;
 
+  // Claude connection
+  claudeConnected: boolean;
+
   // Selection
   activeSlideId: string | null;
   activeColumnId: string | null;
@@ -107,6 +110,9 @@ interface EditorState {
 
   // Actions — Mode
   setMode: (mode: EditorState['mode']) => void;
+
+  // Actions — Claude
+  setClaudeConnected: (connected: boolean) => void;
 
   // Actions — Slides
   addSlide: (type: SlideType) => void;
@@ -133,11 +139,15 @@ interface EditorState {
 export const useDeckStore = create<EditorState>((set, get) => ({
   mode: 'landing',
   project: null,
+  claudeConnected: false,
   activeSlideId: null,
   activeColumnId: null,
   activeElementId: null,
   showElementPalette: false,
   targetColumnId: null,
+
+  // ─── Claude ───
+  setClaudeConnected: (connected) => set({ claudeConnected: connected }),
 
   // ─── Project ───
   createProject: (name: string) => {

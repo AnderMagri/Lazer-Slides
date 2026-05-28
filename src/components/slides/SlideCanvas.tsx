@@ -4,12 +4,11 @@ import { useDeckStore } from "@/store/deck-store";
 import { SlideRenderer } from "./SlideRenderer";
 import { ColumnPicker } from "../ui/ColumnPicker";
 import { useSlideScale } from "@/hooks/useSlideScale";
-import { Minus, Plus } from "@phosphor-icons/react";
 
 export function SlideCanvas() {
   const project = useDeckStore((s) => s.project);
   const activeSlideId = useDeckStore((s) => s.activeSlideId);
-  const setColumnWidth = useDeckStore((s) => s.setColumnWidth);
+  const updateSlide = useDeckStore((s) => s.updateSlide);
   const { containerRef, scale, slideWidth, slideHeight } = useSlideScale();
 
   if (!project || !activeSlideId) return null;
@@ -19,45 +18,40 @@ export function SlideCanvas() {
 
   const showPicker = slide.type === "column" && !slide.layoutChosen;
 
-  // Column width controls (C) — only for multi-column slides
-  const showColumnControls = slide.type === "column" && slide.columns > 1 && slide.layoutChosen;
-  const widths = slide.columnWidths || Array.from(
-    { length: slide.columns },
-    () => Math.round(100 / slide.columns)
+  // Column width presets — only for 2-column slides
+  const showColumnPresets = slide.type === "column" && slide.columns === 2 && slide.layoutChosen;
+  const widths = slide.columnWidths || [50, 50];
+
+  const presets: { label: string; widths: number[] }[] = [
+    { label: "50 / 50", widths: [50, 50] },
+    { label: "70 / 30", widths: [70, 30] },
+    { label: "30 / 70", widths: [30, 70] },
+  ];
+
+  const activePreset = presets.findIndex(
+    (p) => p.widths[0] === widths[0] && p.widths[1] === widths[1]
   );
 
   return (
     <div ref={containerRef} className="flex-1 flex flex-col items-center justify-center overflow-hidden">
-      {/* Column width control bar (C) */}
-      {showColumnControls && (
+      {/* Column width presets (A) */}
+      {showColumnPresets && (
         <div
           className="flex items-center gap-1 mb-3 shrink-0"
           style={{ width: slideWidth * scale }}
         >
-          {widths.map((w, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-center gap-1 h-7 bg-fill-2 border border-stroke-1"
-              style={{ width: `${w}%` }}
+          {presets.map((preset, i) => (
+            <button
+              key={preset.label}
+              onClick={() => updateSlide(slide.id, { columnWidths: [...preset.widths] })}
+              className={`flex-1 h-7 text-ui-xs font-medium transition-colors ${
+                activePreset === i
+                  ? "bg-accent-primary text-text-on-brand"
+                  : "bg-fill-2 border border-stroke-1 text-text-3 hover:text-text-1 hover:bg-alt-1"
+              }`}
             >
-              <button
-                onClick={() => setColumnWidth(slide.id, i, -5)}
-                className="w-5 h-5 flex items-center justify-center text-text-3 hover:text-text-1 transition-colors"
-                title="Shrink column"
-              >
-                <Minus size={10} weight="bold" />
-              </button>
-              <span className="text-ui-xs text-text-3 min-w-[28px] text-center">
-                {Math.round(w)}%
-              </span>
-              <button
-                onClick={() => setColumnWidth(slide.id, i, 5)}
-                className="w-5 h-5 flex items-center justify-center text-text-3 hover:text-text-1 transition-colors"
-                title="Grow column"
-              >
-                <Plus size={10} weight="bold" />
-              </button>
-            </div>
+              {preset.label}
+            </button>
           ))}
         </div>
       )}

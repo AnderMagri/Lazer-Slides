@@ -80,7 +80,7 @@ export function ElementPalette() {
             className="fixed inset-0 bg-alt-3 z-40"
           />
 
-          {/* Full-width bottom bar (D) */}
+          {/* Full-width bottom bar */}
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
@@ -88,34 +88,9 @@ export function ElementPalette() {
             transition={{ type: "spring", damping: 30, stiffness: 400 }}
             className="fixed bottom-0 left-0 right-0 bg-fill-2 border-t border-stroke-1 shadow-elevation-3 z-50"
           >
-            {/* Handle */}
-            <div className="flex justify-center pt-2 pb-1">
-              <div className="w-10 h-1 rounded-full bg-fill-5" />
-            </div>
-
-            {/* Header + Tabs */}
-            <div className="flex items-center justify-between px-6 pb-2">
-              <div className="flex items-center gap-6">
-                <h3 className="text-h3 text-text-1">Elements</h3>
-
-                {/* Category tabs (J) */}
-                <div className="flex items-center gap-1 bg-fill-1 p-1 border border-stroke-1">
-                  {TAB_ORDER.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setActiveTab(cat)}
-                      className={`px-3 py-1 text-ui-xs font-medium transition-colors ${
-                        activeTab === cat
-                          ? "bg-accent-primary text-text-on-brand"
-                          : "text-text-2 hover:text-text-1 hover:bg-alt-1"
-                      }`}
-                    >
-                      {ELEMENT_CATEGORIES[cat].label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
+            {/* Header row — title + close */}
+            <div className="flex items-center justify-between px-8 pt-6 pb-3">
+              <h3 className="text-h3 text-text-1">Elements</h3>
               <button
                 onClick={closeElementPalette}
                 className="w-8 h-8 flex items-center justify-center text-text-2 hover:text-text-1 hover:bg-alt-1 transition-colors"
@@ -124,8 +99,25 @@ export function ElementPalette() {
               </button>
             </div>
 
+            {/* Category tabs — stacked below title */}
+            <div className="flex items-center gap-1 px-8 pb-4">
+              {TAB_ORDER.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveTab(cat)}
+                  className={`px-4 py-1.5 text-ui-xs font-medium transition-colors ${
+                    activeTab === cat
+                      ? "bg-accent-primary text-text-on-brand"
+                      : "bg-fill-1 border border-stroke-1 text-text-2 hover:text-text-1 hover:bg-alt-1"
+                  }`}
+                >
+                  {ELEMENT_CATEGORIES[cat].label}
+                </button>
+              ))}
+            </div>
+
             {/* Element grid */}
-            <div className="flex gap-2 px-6 pb-5 flex-wrap">
+            <div className="flex gap-3 px-8 pb-8 flex-wrap">
               {currentTypes.map((type) => (
                 <button
                   key={type}

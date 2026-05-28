@@ -2,7 +2,7 @@
 
 import type { Slide, SlideElement } from "@/types/deck";
 import { useDeckStore } from "@/store/deck-store";
-import { Plus, Warning, ArrowsOutSimple, ArrowsInSimple } from "@phosphor-icons/react";
+import { Plus, Warning, ArrowsOutSimple, ArrowsInSimple, Trash } from "@phosphor-icons/react";
 import { ElementRenderer } from "./ElementRenderer";
 import { useRef, useState, useEffect } from "react";
 
@@ -43,6 +43,7 @@ function ColumnContainer({
   setActiveElement,
   openElementPalette,
   updateElement,
+  deleteElement,
   widthPercent,
 }: {
   col: { id: string; elements: SlideElement[] };
@@ -53,6 +54,7 @@ function ColumnContainer({
   setActiveElement: (id: string) => void;
   openElementPalette: (columnId: string) => void;
   updateElement: (id: string, updates: Partial<SlideElement>) => void;
+  deleteElement: (id: string) => void;
   widthPercent: number;
 }) {
   const hasExpandedElements = col.elements.some(
@@ -100,24 +102,39 @@ function ColumnContainer({
           >
             <ElementRenderer element={element} />
 
-            {/* Floating sizing badge (H) — editor only, active element */}
+            {/* Floating badges — editor only, active element */}
             {isEditor && activeElementId === element.id && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateElement(element.id, {
-                    sizing: element.sizing === "expand" ? "hug" : "expand",
-                  });
-                }}
-                className="absolute -top-2 -right-2 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-accent-primary text-text-on-brand text-[10px] shadow-elevation-1 hover:scale-110 transition-transform"
-                title={element.sizing === "expand" ? "Hug content" : "Expand to fill"}
-              >
-                {element.sizing === "expand" ? (
-                  <ArrowsInSimple size={12} weight="bold" />
-                ) : (
-                  <ArrowsOutSimple size={12} weight="bold" />
-                )}
-              </button>
+              <>
+                {/* Sizing badge (top-right) */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateElement(element.id, {
+                      sizing: element.sizing === "expand" ? "hug" : "expand",
+                    });
+                  }}
+                  className="absolute -top-2 -right-2 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-accent-primary text-text-on-brand text-[10px] shadow-elevation-1 hover:scale-110 transition-transform"
+                  title={element.sizing === "expand" ? "Hug content" : "Expand to fill"}
+                >
+                  {element.sizing === "expand" ? (
+                    <ArrowsInSimple size={12} weight="bold" />
+                  ) : (
+                    <ArrowsOutSimple size={12} weight="bold" />
+                  )}
+                </button>
+
+                {/* Delete badge (top-left) */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteElement(element.id);
+                  }}
+                  className="absolute -top-2 -left-2 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-fill-3 border border-stroke-1 text-text-2 text-[10px] shadow-elevation-1 hover:bg-status-error hover:text-text-on-brand hover:border-status-error hover:scale-110 transition-all"
+                  title="Delete element"
+                >
+                  <Trash size={12} weight="bold" />
+                </button>
+              </>
             )}
           </div>
         ))}
@@ -155,6 +172,7 @@ export function SlideRenderer({ slide, isEditor = false }: Props) {
   const setActiveElement = useDeckStore((s) => s.setActiveElement);
   const activeElementId = useDeckStore((s) => s.activeElementId);
   const updateElement = useDeckStore((s) => s.updateElement);
+  const deleteElement = useDeckStore((s) => s.deleteElement);
 
   // ─── Cover Slide ───
   if (slide.type === "cover") {
@@ -213,15 +231,10 @@ export function SlideRenderer({ slide, isEditor = false }: Props) {
   return (
     <div className="w-full h-full bg-fill-1 flex flex-col overflow-hidden">
       {/* Slide title bar */}
-      <div className="flex items-center justify-between px-10 py-4 shrink-0">
+      <div className="flex items-center px-10 py-4 shrink-0">
         <span className="text-body-sm text-text-2 break-words">
           {slide.title || "Slide Title"}
         </span>
-        {isEditor && slide.columns > 1 && (
-          <span className="text-label-sm text-text-3">
-            {slide.columns} columns
-          </span>
-        )}
       </div>
 
       {/* Column area */}
@@ -237,6 +250,7 @@ export function SlideRenderer({ slide, isEditor = false }: Props) {
             setActiveElement={setActiveElement}
             openElementPalette={openElementPalette}
             updateElement={updateElement}
+            deleteElement={deleteElement}
             widthPercent={widths[colIndex] ?? Math.round(100 / slide.columns)}
           />
         ))}
