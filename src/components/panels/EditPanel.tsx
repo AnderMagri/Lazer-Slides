@@ -5,10 +5,33 @@ import { useDeckStore } from "@/store/deck-store";
 import type {
   SlideElement, SlideType, SlideColumn, HeadingElement, BodyTextElement, QuoteElement,
   StatElement, ImageElement, DividerElement, SpacerElement, CardElement,
-  IconTextElement, BulletListElement, NumberedListElement,
+  IconTextElement, BulletListElement, NumberedListElement, RowElement, ElementType,
 } from "@/types/deck";
 import { Trash, Plus, Minus, Sparkle, DotsSixVertical } from "@phosphor-icons/react";
 import { AVAILABLE_ICONS } from "../slides/ElementRenderer";
+
+function findInElements(elements: SlideElement[], id: string): SlideElement | null {
+  for (const el of elements) {
+    if (el.id === id) return el;
+    if (el.type === "row") {
+      const found = findInElements((el as RowElement).slots, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// Slot-compatible element types (no nested rows)
+const SLOT_ELEMENT_TYPES: { value: ElementType; label: string }[] = [
+  { value: "heading", label: "Heading" },
+  { value: "body-text", label: "Body Text" },
+  { value: "stat", label: "Stat" },
+  { value: "icon-text", label: "Icon + Text" },
+  { value: "image", label: "Image" },
+  { value: "card", label: "Card" },
+  { value: "person-card", label: "Person" },
+  { value: "chart", label: "Chart" },
+];
 
 export function EditPanel() {
   const project = useDeckStore((s) => s.project);
@@ -29,7 +52,7 @@ export function EditPanel() {
   let activeColumn: SlideColumn | null = null;
   if (activeElementId) {
     for (const col of slide.columnData) {
-      const found = col.elements.find((el) => el.id === activeElementId);
+      const found = findInElements(col.elements, activeElementId);
       if (found) { activeElement = found; activeColumn = col; break; }
     }
   }
@@ -195,6 +218,7 @@ const LAYER_LABELS: Record<SlideElement["type"], string> = {
   chart: "Chart",
   "person-card": "Person",
   "icon-text": "Icon + Text",
+  row: "Row",
   divider: "Divider",
   spacer: "Spacer",
 };
@@ -334,6 +358,7 @@ function ElementEditor({
       {element.type === "icon-text" && <IconTextFields element={element} onUpdate={onUpdate as (u: Partial<IconTextElement>) => void} />}
       {element.type === "bullet-list" && <BulletListFields element={element} onUpdate={onUpdate as (u: Partial<BulletListElement>) => void} />}
       {element.type === "numbered-list" && <NumberedListFields element={element} onUpdate={onUpdate as (u: Partial<NumberedListElement>) => void} />}
+      {element.type === "row" && <RowFields element={element as RowElement} onUpdate={onUpdate as (u: Partial<RowElement>) => void} />}
     </div>
   );
 }
@@ -589,6 +614,92 @@ function NumberedListFields({ element, onUpdate }: { element: NumberedListElemen
       <button onClick={addItem} className="flex items-center justify-center gap-1 py-1.5 border border-dashed border-stroke-1 text-text-3 text-ui-xs hover:border-accent-primary hover:text-accent-primary transition-colors">
         <Plus size={12} /> Add Step
       </button>
+    </>
+  );
+}
+
+// ─── Row Fields ───
+
+function RowFields({ element, onUpdate }: { element: RowElement; onUpdate: (u: Partial<RowElement>) => void }) {
+  const addSlotElement = useDeckStore((s) => s.addSlotElement);
+  const removeSlotElement = useDeckStore((s) => s.removeSlotElement);
+  const setActiveElement = useDeckStore((s) => s.setActiveElement);
+  const updateElement = useDeckStore((s) => s.updateElement);
+
+  return (
+    <>
+      <Label text="Gap">
+        <select
+          value={element.gap}
+          onChange={(e) => onUpdate({ gap: e.target.value as "sm" | "md" | "lg" })}
+          className="input-field"
+        >
+          <option value="sm">Small</option>
+          <option value="md">Medium</option>
+          <option value="lg">Large</option>
+        </select>
+      </Label>
+
+      <Label text={`Slots (${element.slots.length}/3)`}>
+        <div className="flex flex-col gap-1.5">
+          {element.slots.map((slot, i) => (
+            <div key={slot.id} className="flex items-center gap-1.5">
+              {/* Slot type selector */}
+              <select
+                value={slot.type}
+                onChange={(e) => {
+                  // Changing the type of a slot: we need to keep the id but replace the rest
+                  // For simplicity, just update the type — the store will handle creating defaults
+                  // Actually, we should change the element type via a special mechanism
+                  // For now, let's just show the type as info
+                }}
+                disabled
+                className="input-field flex-1 text-ui-xs"
+              >
+                {SLOT_ELEMENT_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+
+              {/* Select slot */}
+              <button
+                onClick={() => setActiveElement(slot.id)}
+                className="icon-btn text-text-2 hover:text-text-1"
+                title="Edit slot"
+              >
+                <Sparkle size={12} />
+              </button>
+
+              {/* Remove slot */}
+              <button
+                onClick={() => removeSlotElement(element.id, i)}
+                className="icon-btn text-text-3 hover:text-status-error"
+                title="Remove slot"
+              >
+                <Trash size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </Label>
+
+      {element.slots.length < 3 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-ui-xs font-medium text-text-2 uppercase tracking-wider">Add Slot</span>
+          <div className="flex flex-wrap gap-1">
+            {SLOT_ELEMENT_TYPES.slice(0, 4).map((t) => (
+              <button
+                key={t.value}
+                onClick={() => addSlotElement(element.id, t.value)}
+                className="flex items-center gap-1 px-2 py-1 text-ui-xs text-text-2 border border-stroke-1 hover:border-stroke-2 hover:text-text-1 transition-colors"
+              >
+                <Plus size={10} />
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 }

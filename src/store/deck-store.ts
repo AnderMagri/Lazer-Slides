@@ -7,8 +7,40 @@ import type {
   SlideColumn,
   SlideElement,
   HeadingElement,
+  RowElement,
   AiRequest,
 } from '@/types/deck';
+
+// ─── Recursive element helpers (for row slots) ───
+
+function updateElementRecursive(el: SlideElement, id: string, updates: Partial<SlideElement>): SlideElement {
+  if (el.id === id) return { ...el, ...updates } as SlideElement;
+  if (el.type === 'row') {
+    return { ...el, slots: (el as RowElement).slots.map(s => updateElementRecursive(s, id, updates)) } as SlideElement;
+  }
+  return el;
+}
+
+function deleteElementRecursive(el: SlideElement, id: string): SlideElement | null {
+  if (el.id === id) return null;
+  if (el.type === 'row') {
+    const filtered = (el as RowElement).slots.filter(s => s.id !== id);
+    if (filtered.length === 0) return null; // remove empty row
+    return { ...el, slots: filtered } as SlideElement;
+  }
+  return el;
+}
+
+function findElementRecursive(elements: SlideElement[], id: string): SlideElement | null {
+  for (const el of elements) {
+    if (el.id === id) return el;
+    if (el.type === 'row') {
+      const found = findElementRecursive((el as RowElement).slots, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -78,6 +110,16 @@ function createDefaultElement(type: SlideElement['type']): SlideElement {
       return { ...base, type: 'bullet-list', items: ['First item', 'Second item', 'Third item'] };
     case 'numbered-list':
       return { ...base, type: 'numbered-list', items: ['First step', 'Second step', 'Third step'], startNumber: 1 };
+    case 'row':
+      return {
+        ...base,
+        type: 'row',
+        slots: [
+          { id: generateId(), type: 'stat', sizing: 'hug', value: '100%', label: 'Metric A', layout: 'stacked' },
+          { id: generateId(), type: 'stat', sizing: 'hug', value: '50+', label: 'Metric B', layout: 'stacked' },
+        ],
+        gap: 'md',
+      };
     default:
       return { ...base, type: 'heading', text: 'Heading', style: 'h1', showBadge: false, badgeText: '' } as HeadingElement;
   }
@@ -137,6 +179,8 @@ interface EditorState {
   updateElement: (elementId: string, updates: Partial<SlideElement>) => void;
   deleteElement: (elementId: string) => void;
   moveElement: (elementId: string, direction: 'up' | 'down') => void;
+  addSlotElement: (rowId: string, elementType: SlideElement['type']) => void;
+  removeSlotElement: (rowId: string, slotIndex: number) => void;
   moveElementToPosition: (elementId: string, targetColumnId: string, targetIndex: number) => void;
   setActiveElement: (elementId: string | null) => void;
 
@@ -163,9 +207,8 @@ export const useDeckStore = create<EditorState>((set, get) => ({
     // Build context from current state
     const { project, activeSlideId } = get();
     const slide = project?.slides.find(s => s.id === activeSlideId);
-    const element = slide?.columnData
-      .flatMap(c => c.elements)
-      .find(e => e.id === elementId);
+    const allElements = slide?.columnData.flatMap(c => c.elements) ?? [];
+    const element = findElementRecursive(allElements, elementId);
 
     const context = [
       `Slide type: ${slide?.type}`,
@@ -449,9 +492,7 @@ export const useDeckStore = create<EditorState>((set, get) => ({
       ...s,
       columnData: s.columnData.map(col => ({
         ...col,
-        elements: col.elements.map(el =>
-          el.id === elementId ? { ...el, ...updates } as SlideElement : el
-        ),
+        elements: col.elements.map(el => updateElementRecursive(el, elementId, updates)),
       })),
     }));
     set({ project: { ...project, slides } });
@@ -465,7 +506,9 @@ export const useDeckStore = create<EditorState>((set, get) => ({
       ...s,
       columnData: s.columnData.map(col => ({
         ...col,
-        elements: col.elements.filter(el => el.id !== elementId),
+        elements: col.elements
+          .map(el => deleteElementRecursive(el, elementId))
+          .filter((el): el is SlideElement => el !== null),
       })),
     }));
     set({ project: { ...project, slides }, activeElementId: null });
@@ -536,6 +579,50 @@ export const useDeckStore = create<EditorState>((set, get) => ({
     }));
 
     set({ project: { ...project, slides }, activeElementId: elementId });
+  },
+
+  addSlotElement: (rowId: string, elementType: SlideElement['type']) => {
+    const { project } = get();
+    if (!project) return;
+    const newEl = createDefaultElement(elementType);
+    const slides = project.slides.map(s => ({
+      ...s,
+      columnData: s.columnData.map(col => ({
+        ...col,
+        elements: col.elements.map(el => {
+          if (el.id === rowId && el.type === 'row') {
+            const row = el as RowElement;
+            if (row.slots.length >= 3) return el; // max 3 slots
+            return { ...row, slots: [...row.slots, newEl] } as SlideElement;
+          }
+          return el;
+        }),
+      })),
+    }));
+    set({ project: { ...project, slides }, activeElementId: newEl.id });
+  },
+
+  removeSlotElement: (rowId: string, slotIndex: number) => {
+    const { project } = get();
+    if (!project) return;
+    const slides = project.slides.map(s => ({
+      ...s,
+      columnData: s.columnData.map(col => ({
+        ...col,
+        elements: col.elements
+          .map(el => {
+            if (el.id === rowId && el.type === 'row') {
+              const row = el as RowElement;
+              const slots = row.slots.filter((_, i) => i !== slotIndex);
+              if (slots.length === 0) return null; // remove empty row
+              return { ...row, slots } as SlideElement;
+            }
+            return el;
+          })
+          .filter((el): el is SlideElement => el !== null),
+      })),
+    }));
+    set({ project: { ...project, slides }, activeElementId: null });
   },
 
   setActiveElement: (elementId: string | null) =>

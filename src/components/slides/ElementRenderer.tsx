@@ -1,6 +1,6 @@
 "use client";
 
-import type { SlideElement } from "@/types/deck";
+import type { SlideElement, RowElement } from "@/types/deck";
 import {
   Star, Lightning, Heart, Eye, Shield, Gear,
   Rocket, Target, Trophy, Flag, Bell, Chat,
@@ -231,6 +231,20 @@ export function ElementRenderer({ element }: Props) {
           </ol>
         </div>
       );
+
+    case "row": {
+      const row = element as RowElement;
+      const gapClass = row.gap === "sm" ? "gap-2" : row.gap === "lg" ? "gap-6" : "gap-4";
+      return (
+        <div className={`py-2 flex ${gapClass}`}>
+          {row.slots.map((slot) => (
+            <div key={slot.id} className="flex-1 min-w-0">
+              <ElementRenderer element={slot} />
+            </div>
+          ))}
+        </div>
+      );
+    }
 
     default:
       return (

@@ -18,6 +18,7 @@ import {
   Hash,
   ListBullets,
   ListNumbers,
+  Rows,
 } from "@phosphor-icons/react";
 import type { SlideElement, ElementCategory } from "@/types/deck";
 import { ELEMENT_CATEGORIES } from "@/types/deck";
@@ -34,6 +35,7 @@ const ELEMENT_ICONS: Record<SlideElement["type"], React.ReactNode> = {
   chart: <ChartBar size={22} />,
   "person-card": <UserCircle size={22} />,
   "icon-text": <Star size={22} />,
+  row: <Rows size={22} />,
   divider: <Minus size={22} />,
   spacer: <ArrowsOutLineVertical size={22} />,
 };
@@ -50,6 +52,7 @@ const ELEMENT_LABELS: Record<SlideElement["type"], string> = {
   chart: "Chart",
   "person-card": "Person",
   "icon-text": "Icon+Text",
+  row: "Row",
   divider: "Divider",
   spacer: "Spacer",
 };

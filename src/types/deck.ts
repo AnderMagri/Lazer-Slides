@@ -33,7 +33,8 @@ export type ElementType =
   | 'person-card'
   | 'icon-text'
   | 'bullet-list'
-  | 'numbered-list';
+  | 'numbered-list'
+  | 'row';
 
 // ─── Element Palette Categories ───
 
@@ -50,7 +51,7 @@ export const ELEMENT_CATEGORIES: Record<ElementCategory, { label: string; types:
   },
   layout: {
     label: 'Layout',
-    types: ['divider', 'spacer'],
+    types: ['row', 'divider', 'spacer'],
   },
 };
 
@@ -145,6 +146,12 @@ export interface NumberedListElement extends BaseElement {
   startNumber: number;
 }
 
+export interface RowElement extends BaseElement {
+  type: 'row';
+  slots: SlideElement[];   // 2–3 child elements displayed side by side
+  gap: 'sm' | 'md' | 'lg';
+}
+
 export type SlideElement =
   | HeadingElement
   | BodyTextElement
@@ -158,7 +165,8 @@ export type SlideElement =
   | PersonCardElement
   | IconTextElement
   | BulletListElement
-  | NumberedListElement;
+  | NumberedListElement
+  | RowElement;
 
 // ─── Column & Slide ───
 

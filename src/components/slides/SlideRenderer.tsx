@@ -201,7 +201,7 @@ function ColumnContainer({
               }}
               className={`shrink-0 relative group ${
                 element.sizing === "expand"
-                  ? "flex-1 flex items-center justify-center min-h-0"
+                  ? "flex-1 flex flex-col justify-center min-h-0"
                   : ""
               } ${
                 isEditor
