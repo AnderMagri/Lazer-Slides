@@ -87,7 +87,7 @@ function createDefaultElement(type: SlideElement['type']): SlideElement {
 
 interface EditorState {
   // Mode
-  mode: 'landing' | 'editor' | 'present';
+  mode: 'landing' | 'editor' | 'present' | 'design';
 
   // Project
   project: DeckProject | null;
@@ -111,6 +111,7 @@ interface EditorState {
   createProject: (name: string) => void;
   loadProject: (json: string) => void;
   saveProject: () => string;
+  updateProject: (updates: Partial<DeckProject>) => void;
 
   // Actions — Mode
   setMode: (mode: EditorState['mode']) => void;
@@ -235,6 +236,12 @@ export const useDeckStore = create<EditorState>((set, get) => ({
     const updated = { ...project, updatedAt: new Date().toISOString() };
     set({ project: updated });
     return JSON.stringify(updated, null, 2);
+  },
+
+  updateProject: (updates) => {
+    const { project } = get();
+    if (!project) return;
+    set({ project: { ...project, ...updates } });
   },
 
   // ─── Mode ───

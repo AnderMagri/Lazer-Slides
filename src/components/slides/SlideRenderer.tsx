@@ -1,9 +1,11 @@
 "use client";
 
 import type { Slide, SlideElement } from "@/types/deck";
+import { DEFAULT_THEME } from "@/types/deck";
 import { useDeckStore } from "@/store/deck-store";
 import { Plus, Warning, ArrowsOutSimple, ArrowsInSimple, Trash, DotsSixVertical, CaretRight, X } from "@phosphor-icons/react";
 import { ElementRenderer } from "./ElementRenderer";
+import { CanvasBackground } from "./CanvasBackground";
 import { useDeckStore as useDeckStoreRaw } from "@/store/deck-store";
 import { useRef, useState, useEffect, useCallback } from "react";
 
@@ -302,6 +304,7 @@ export function SlideRenderer({ slide, isEditor = false, onNavigateToSlide }: Pr
   const updateElement = useDeckStore((s) => s.updateElement);
   const deleteElement = useDeckStore((s) => s.deleteElement);
   const moveElementToPosition = useDeckStore((s) => s.moveElementToPosition);
+  const theme = useDeckStoreRaw((s) => s.project?.theme) ?? DEFAULT_THEME;
   const [showSlideList, setShowSlideList] = useState(false);
 
   // ─── Slide list chevron (shared by all slide types) ───
@@ -340,10 +343,11 @@ export function SlideRenderer({ slide, isEditor = false, onNavigateToSlide }: Pr
   // ─── Cover Slide ───
   if (slide.type === "cover") {
     return (
-      <div className="w-full h-full bg-fill-1 flex items-center justify-center p-[var(--slide-padding-x)] relative">
+      <div className="w-full h-full bg-fill-1 flex items-center justify-center p-[var(--slide-padding-x)] relative overflow-hidden">
+        <CanvasBackground config={theme.coverBackground} />
         {slideListChevron}
         {slideListOverlay}
-        <div className="flex flex-col items-center gap-4 text-center max-w-[80%]">
+        <div className="relative z-10 flex flex-col items-center gap-4 text-center max-w-[80%]">
           <h1 className="text-display-hero text-text-1 break-words">{slide.title}</h1>
           <p className="text-h2 text-text-2 break-words">{slide.subtitle}</p>
           <p className="text-body text-text-3 break-words">{slide.context}</p>
@@ -374,12 +378,13 @@ export function SlideRenderer({ slide, isEditor = false, onNavigateToSlide }: Pr
   if (slide.type === "end") {
     return (
       <div
-        className="w-full h-full flex items-center justify-center relative"
+        className="w-full h-full flex items-center justify-center relative overflow-hidden"
         style={{ background: "var(--accent-primary)" }}
       >
+        <CanvasBackground config={theme.endBackground} />
         {slideListChevron}
         {slideListOverlay}
-        <div className="flex flex-col items-center gap-6 text-center">
+        <div className="relative z-10 flex flex-col items-center gap-6 text-center">
           <h2 className="text-display-hero text-text-on-brand break-words">
             {slide.title}
           </h2>

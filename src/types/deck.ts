@@ -192,6 +192,7 @@ export interface DeckProject {
   updatedAt: string;
   version: string;
   slides: Slide[];
+  theme?: ThemeConfig;
 }
 
 // ─── AI Requests ───
@@ -205,6 +206,69 @@ export interface AiRequest {
   status: 'pending' | 'processing' | 'done';
   createdAt: number;
 }
+
+// ─── Theme Config (Design Access) ───
+
+export type BackgroundEffect = 'none' | 'gradient-orbs' | 'particle-mesh' | 'aurora';
+
+export interface SlideBackground {
+  effect: BackgroundEffect;
+  intensity: number;    // 0–1, controls opacity/size of the effect
+  speed: number;        // 0–1, animation speed multiplier
+  colors: string[];     // up to 3 colors for the effect
+}
+
+export interface ThemeColors {
+  primary: string;
+  secondary: string;
+  background: string;
+  surface: string;
+  text: string;
+  textSecondary: string;
+}
+
+export interface ThemeTypography {
+  displayFont: string;
+  bodyFont: string;
+  monoFont: string;
+}
+
+export interface ThemeConfig {
+  // Brand
+  colors: ThemeColors;
+  typography: ThemeTypography;
+  // Background effects per slide type
+  coverBackground: SlideBackground;
+  endBackground: SlideBackground;
+}
+
+export const DEFAULT_THEME: ThemeConfig = {
+  colors: {
+    primary: '#ff00c5',
+    secondary: '#4200ff',
+    background: '#0a0a0f',
+    surface: '#121318',
+    text: '#f5f5f5',
+    textSecondary: '#a3a3a3',
+  },
+  typography: {
+    displayFont: "'Cal Sans UI', 'Cal Sans', system-ui, sans-serif",
+    bodyFont: "'Hauora', system-ui, sans-serif",
+    monoFont: "'Space Mono', 'Geist Mono', monospace",
+  },
+  coverBackground: {
+    effect: 'gradient-orbs',
+    intensity: 0.6,
+    speed: 0.4,
+    colors: ['#ff00c5', '#4200ff', '#0a0a0f'],
+  },
+  endBackground: {
+    effect: 'aurora',
+    intensity: 0.5,
+    speed: 0.3,
+    colors: ['#ff00c5', '#4200ff', '#ff33d1'],
+  },
+};
 
 // ─── Settings ───
 

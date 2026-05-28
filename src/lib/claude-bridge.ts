@@ -7,7 +7,8 @@
  */
 
 import { useDeckStore } from "@/store/deck-store";
-import type { AiRequest } from "@/types/deck";
+import type { AiRequest, ThemeConfig } from "@/types/deck";
+import { DEFAULT_THEME } from "@/types/deck";
 
 const HEARTBEAT_TIMEOUT = 15_000; // 15 seconds without ping = disconnected
 
@@ -37,6 +38,8 @@ export interface LazerSlidesBridge {
   // Project
   createProject: (name: string) => void;
   saveProject: () => string;
+  getTheme: () => Record<string, unknown>;
+  updateTheme: (updates: Record<string, unknown>) => void;
 
   // Slides
   addSlide: (type: "cover" | "title" | "column" | "end") => void;
@@ -57,7 +60,7 @@ export interface LazerSlidesBridge {
   setColumnWidth: (slideId: string, columnIndex: number, delta: number) => void;
 
   // Mode
-  setMode: (mode: "landing" | "editor" | "present") => void;
+  setMode: (mode: "landing" | "editor" | "present" | "design") => void;
 }
 
 declare global {
@@ -105,6 +108,17 @@ The user can click ✦ sparkle buttons on text fields to request your help.
   getState()                → Full Zustand store state
   getProject()              → Just the project object
   getActiveSlide()          → { slide, id } of currently active slide
+  getTheme()                → Current theme config (background effects, colors)
+  updateTheme(updates)      → Merge updates into theme config (design access)
+
+🎬 BACKGROUND EFFECTS (Design Access)
+  Cover and End slides support canvas background animations.
+  Effects: "none" | "gradient-orbs" | "particle-mesh" | "aurora"
+
+  updateTheme({
+    coverBackground: { effect: "gradient-orbs", intensity: 0.6, speed: 0.4, colors: ["#ff00c5", "#4200ff", "#0a0a0f"] },
+    endBackground:   { effect: "aurora", intensity: 0.5, speed: 0.3, colors: ["#ff00c5", "#4200ff", "#ff33d1"] },
+  })
 
 📑 SLIDE TYPES
   "cover"   → Hero slide: title, subtitle, context (centered, large text)
@@ -161,6 +175,7 @@ The user can click ✦ sparkle buttons on text fields to request your help.
   setMode("landing")  → Back to home screen
   setMode("editor")   → Editor view
   setMode("present")  → Full-screen presentation
+  setMode("design")   → Design Access panel (brand/theme controls)
 
 💡 QUICK START — Build a 3-slide deck:
   __lazerSlides.ping()
@@ -281,6 +296,17 @@ export function initClaudeBridge() {
     // ─── Project ───
     createProject: (name) => useDeckStore.getState().createProject(name),
     saveProject: () => useDeckStore.getState().saveProject(),
+    getTheme: () => {
+      const project = useDeckStore.getState().project;
+      return (project?.theme ?? DEFAULT_THEME) as unknown as Record<string, unknown>;
+    },
+    updateTheme: (updates) => {
+      const state = useDeckStore.getState();
+      if (!state.project) return;
+      const currentTheme = state.project.theme ?? DEFAULT_THEME;
+      const newTheme = { ...currentTheme, ...updates } as ThemeConfig;
+      state.updateProject({ theme: newTheme });
+    },
 
     // ─── Slides ───
     addSlide: (type) => useDeckStore.getState().addSlide(type),
