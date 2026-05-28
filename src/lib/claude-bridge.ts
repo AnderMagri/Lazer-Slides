@@ -4,6 +4,7 @@
  *
  * Usage from Claude (via browser javascript_tool or preview_eval):
  *   __lazerSlides.ping()              // confirm connection, starts heartbeat
+ *   __lazerSlides.getAiRequests()     // check for pending AI improve requests
  *   __lazerSlides.addSlide("column")
  *   __lazerSlides.addElement(columnId, "heading")
  *   __lazerSlides.updateElement(elementId, { text: "New Title" })
@@ -11,6 +12,7 @@
  */
 
 import { useDeckStore } from "@/store/deck-store";
+import type { AiRequest } from "@/types/deck";
 
 const HEARTBEAT_TIMEOUT = 15_000; // 15 seconds without ping = disconnected
 
@@ -19,6 +21,11 @@ export interface LazerSlidesBridge {
   ping: () => string;
   disconnect: () => void;
   isConnected: () => boolean;
+
+  // AI Requests
+  getAiRequests: () => AiRequest[];
+  resolveAiRequest: (requestId: string) => void;
+  clearAiRequests: () => void;
 
   // Read state
   getState: () => ReturnType<typeof useDeckStore.getState>;
@@ -89,6 +96,11 @@ export function initClaudeBridge() {
       return;
     },
     isConnected: () => useDeckStore.getState().claudeConnected,
+
+    // ─── AI Requests ───
+    getAiRequests: () => useDeckStore.getState().aiRequests,
+    resolveAiRequest: (id) => useDeckStore.getState().resolveAiRequest(id),
+    clearAiRequests: () => useDeckStore.getState().clearAiRequests(),
 
     // ─── Read State ───
     getState: () => useDeckStore.getState(),

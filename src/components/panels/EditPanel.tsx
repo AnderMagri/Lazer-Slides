@@ -6,7 +6,7 @@ import type {
   StatElement, ImageElement, DividerElement, SpacerElement, CardElement,
   IconTextElement, BulletListElement, NumberedListElement,
 } from "@/types/deck";
-import { Trash, ArrowUp, ArrowDown, Plus, Minus } from "@phosphor-icons/react";
+import { Trash, ArrowUp, ArrowDown, Plus, Minus, Sparkle } from "@phosphor-icons/react";
 import { AVAILABLE_ICONS } from "../slides/ElementRenderer";
 
 export function EditPanel() {
@@ -58,7 +58,37 @@ export function EditPanel() {
   );
 }
 
-// ─── Slide Properties Editor (B: type switching) ───
+// ─── AI Sparkle Button ───
+
+function AiSparkleButton({ elementId, field, value }: { elementId: string; field: string; value: string }) {
+  const claudeConnected = useDeckStore((s) => s.claudeConnected);
+  const queueAiRequest = useDeckStore((s) => s.queueAiRequest);
+  const aiRequests = useDeckStore((s) => s.aiRequests);
+
+  if (!claudeConnected) return null;
+
+  const isPending = aiRequests.some(
+    (r) => r.elementId === elementId && r.field === field && r.status === "pending"
+  );
+
+  return (
+    <button
+      onClick={() => {
+        if (!isPending) queueAiRequest(elementId, field, value);
+      }}
+      className={`w-5 h-5 flex items-center justify-center transition-all ${
+        isPending
+          ? "text-accent-primary animate-pulse"
+          : "text-text-3 hover:text-accent-primary hover:scale-110"
+      }`}
+      title={isPending ? "Waiting for Claude…" : "Improve with Claude"}
+    >
+      <Sparkle size={14} weight={isPending ? "fill" : "regular"} />
+    </button>
+  );
+}
+
+// ─── Slide Properties Editor ───
 
 function SlideEditor({
   slide,
@@ -72,7 +102,7 @@ function SlideEditor({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* (B) Slide type selector */}
+      {/* Slide type selector */}
       <Label text="Slide Type">
         <select
           value={slide.type}
@@ -140,7 +170,7 @@ function SlideEditor({
   );
 }
 
-// ─── Element Editor (H: removed sizing toggle — now floating badge on canvas) ───
+// ─── Element Editor ───
 
 function ElementEditor({
   element, onUpdate, onDelete, onMove,
@@ -186,7 +216,9 @@ function ElementEditor({
 function HeadingFields({ element, onUpdate }: { element: HeadingElement; onUpdate: (u: Partial<HeadingElement>) => void }) {
   return (
     <>
-      <Label text="Text"><textarea value={element.text} onChange={(e) => onUpdate({ text: e.target.value })} className="input-field min-h-[60px] resize-y" /></Label>
+      <Label text="Text" sparkle={<AiSparkleButton elementId={element.id} field="text" value={element.text} />}>
+        <textarea value={element.text} onChange={(e) => onUpdate({ text: e.target.value })} className="input-field min-h-[60px] resize-y" />
+      </Label>
       <Label text="Style">
         <select value={element.style} onChange={(e) => onUpdate({ style: e.target.value as HeadingElement["style"] })} className="input-field">
           <option value="display-mega">Mega</option><option value="display-hero">Hero</option><option value="display-title">Title</option>
@@ -206,7 +238,9 @@ function HeadingFields({ element, onUpdate }: { element: HeadingElement; onUpdat
 function BodyTextField({ element, onUpdate }: { element: BodyTextElement; onUpdate: (u: Partial<BodyTextElement>) => void }) {
   return (
     <>
-      <Label text="Text"><textarea value={element.text} onChange={(e) => onUpdate({ text: e.target.value })} className="input-field min-h-[100px] resize-y" /></Label>
+      <Label text="Text" sparkle={<AiSparkleButton elementId={element.id} field="text" value={element.text} />}>
+        <textarea value={element.text} onChange={(e) => onUpdate({ text: e.target.value })} className="input-field min-h-[100px] resize-y" />
+      </Label>
       <Label text="Style">
         <select value={element.style} onChange={(e) => onUpdate({ style: e.target.value as BodyTextElement["style"] })} className="input-field">
           <option value="body-lg">Large</option><option value="body">Default</option><option value="body-sm">Small</option>
@@ -219,7 +253,9 @@ function BodyTextField({ element, onUpdate }: { element: BodyTextElement; onUpda
 function QuoteFields({ element, onUpdate }: { element: QuoteElement; onUpdate: (u: Partial<QuoteElement>) => void }) {
   return (
     <>
-      <Label text="Quote"><textarea value={element.text} onChange={(e) => onUpdate({ text: e.target.value })} className="input-field min-h-[80px] resize-y" /></Label>
+      <Label text="Quote" sparkle={<AiSparkleButton elementId={element.id} field="text" value={element.text} />}>
+        <textarea value={element.text} onChange={(e) => onUpdate({ text: e.target.value })} className="input-field min-h-[80px] resize-y" />
+      </Label>
       <Label text="Attribution"><input type="text" value={element.attribution} onChange={(e) => onUpdate({ attribution: e.target.value })} className="input-field" /></Label>
     </>
   );
@@ -229,7 +265,9 @@ function StatFields({ element, onUpdate }: { element: StatElement; onUpdate: (u:
   return (
     <>
       <Label text="Value"><input type="text" value={element.value} onChange={(e) => onUpdate({ value: e.target.value })} className="input-field" /></Label>
-      <Label text="Label"><input type="text" value={element.label} onChange={(e) => onUpdate({ label: e.target.value })} className="input-field" /></Label>
+      <Label text="Label" sparkle={<AiSparkleButton elementId={element.id} field="label" value={element.label} />}>
+        <input type="text" value={element.label} onChange={(e) => onUpdate({ label: e.target.value })} className="input-field" />
+      </Label>
       <Label text="Layout">
         <select value={element.layout} onChange={(e) => onUpdate({ layout: e.target.value as "stacked" | "inline" })} className="input-field">
           <option value="stacked">Stacked</option><option value="inline">Inline</option>
@@ -302,7 +340,6 @@ function SpacerFields({ element, onUpdate }: { element: SpacerElement; onUpdate:
   );
 }
 
-// (G) Card with optional image
 function CardFields({ element, onUpdate }: { element: CardElement; onUpdate: (u: Partial<CardElement>) => void }) {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -330,13 +367,16 @@ function CardFields({ element, onUpdate }: { element: CardElement; onUpdate: (u:
           </label>
         </div>
       </Label>
-      <Label text="Title"><input type="text" value={element.title} onChange={(e) => onUpdate({ title: e.target.value })} className="input-field" /></Label>
-      <Label text="Body"><textarea value={element.body} onChange={(e) => onUpdate({ body: e.target.value })} className="input-field min-h-[60px] resize-y" /></Label>
+      <Label text="Title" sparkle={<AiSparkleButton elementId={element.id} field="title" value={element.title} />}>
+        <input type="text" value={element.title} onChange={(e) => onUpdate({ title: e.target.value })} className="input-field" />
+      </Label>
+      <Label text="Body" sparkle={<AiSparkleButton elementId={element.id} field="body" value={element.body} />}>
+        <textarea value={element.body} onChange={(e) => onUpdate({ body: e.target.value })} className="input-field min-h-[60px] resize-y" />
+      </Label>
     </>
   );
 }
 
-// (I) Icon picker for icon-text
 function IconTextFields({ element, onUpdate }: { element: IconTextElement; onUpdate: (u: Partial<IconTextElement>) => void }) {
   return (
     <>
@@ -347,7 +387,9 @@ function IconTextFields({ element, onUpdate }: { element: IconTextElement; onUpd
           ))}
         </select>
       </Label>
-      <Label text="Text"><input type="text" value={element.text} onChange={(e) => onUpdate({ text: e.target.value })} className="input-field" /></Label>
+      <Label text="Text" sparkle={<AiSparkleButton elementId={element.id} field="text" value={element.text} />}>
+        <input type="text" value={element.text} onChange={(e) => onUpdate({ text: e.target.value })} className="input-field" />
+      </Label>
       <Label text="Layout">
         <select value={element.layout} onChange={(e) => onUpdate({ layout: e.target.value as "horizontal" | "vertical" })} className="input-field">
           <option value="horizontal">Horizontal</option><option value="vertical">Vertical</option>
@@ -357,7 +399,6 @@ function IconTextFields({ element, onUpdate }: { element: IconTextElement; onUpd
   );
 }
 
-// (J) Bullet list editor
 function BulletListFields({ element, onUpdate }: { element: BulletListElement; onUpdate: (u: Partial<BulletListElement>) => void }) {
   const updateItem = (index: number, value: string) => {
     const items = [...element.items];
@@ -372,7 +413,7 @@ function BulletListFields({ element, onUpdate }: { element: BulletListElement; o
 
   return (
     <>
-      <Label text="Items">
+      <Label text="Items" sparkle={<AiSparkleButton elementId={element.id} field="items" value={element.items.join(", ")} />}>
         <div className="flex flex-col gap-1.5">
           {element.items.map((item, i) => (
             <div key={i} className="flex items-center gap-1">
@@ -390,7 +431,6 @@ function BulletListFields({ element, onUpdate }: { element: BulletListElement; o
   );
 }
 
-// (J) Numbered list editor
 function NumberedListFields({ element, onUpdate }: { element: NumberedListElement; onUpdate: (u: Partial<NumberedListElement>) => void }) {
   const updateItem = (index: number, value: string) => {
     const items = [...element.items];
@@ -408,7 +448,7 @@ function NumberedListFields({ element, onUpdate }: { element: NumberedListElemen
       <Label text="Start Number">
         <input type="number" value={element.startNumber} onChange={(e) => onUpdate({ startNumber: parseInt(e.target.value) || 1 })} className="input-field w-20" min={1} />
       </Label>
-      <Label text="Items">
+      <Label text="Items" sparkle={<AiSparkleButton elementId={element.id} field="items" value={element.items.join(", ")} />}>
         <div className="flex flex-col gap-1.5">
           {element.items.map((item, i) => (
             <div key={i} className="flex items-center gap-1">
@@ -428,10 +468,13 @@ function NumberedListFields({ element, onUpdate }: { element: NumberedListElemen
 
 // ─── Shared UI ───
 
-function Label({ text, children }: { text: string; children: React.ReactNode }) {
+function Label({ text, sparkle, children }: { text: string; sparkle?: React.ReactNode; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-ui-xs font-medium text-text-2 uppercase tracking-wider">{text}</span>
+      <span className="flex items-center gap-1.5">
+        <span className="text-ui-xs font-medium text-text-2 uppercase tracking-wider">{text}</span>
+        {sparkle}
+      </span>
       {children}
     </label>
   );

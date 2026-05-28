@@ -7,6 +7,7 @@ import type {
   SlideColumn,
   SlideElement,
   HeadingElement,
+  AiRequest,
 } from '@/types/deck';
 
 function generateId(): string {
@@ -94,6 +95,9 @@ interface EditorState {
   // Claude connection
   claudeConnected: boolean;
 
+  // AI requests
+  aiRequests: AiRequest[];
+
   // Selection
   activeSlideId: string | null;
   activeColumnId: string | null;
@@ -113,6 +117,9 @@ interface EditorState {
 
   // Actions — Claude
   setClaudeConnected: (connected: boolean) => void;
+  queueAiRequest: (elementId: string, field: string, currentValue: string) => void;
+  resolveAiRequest: (requestId: string) => void;
+  clearAiRequests: () => void;
 
   // Actions — Slides
   addSlide: (type: SlideType) => void;
@@ -140,6 +147,7 @@ export const useDeckStore = create<EditorState>((set, get) => ({
   mode: 'landing',
   project: null,
   claudeConnected: false,
+  aiRequests: [],
   activeSlideId: null,
   activeColumnId: null,
   activeElementId: null,
@@ -148,6 +156,42 @@ export const useDeckStore = create<EditorState>((set, get) => ({
 
   // ─── Claude ───
   setClaudeConnected: (connected) => set({ claudeConnected: connected }),
+
+  queueAiRequest: (elementId, field, currentValue) => {
+    // Build context from current state
+    const { project, activeSlideId } = get();
+    const slide = project?.slides.find(s => s.id === activeSlideId);
+    const element = slide?.columnData
+      .flatMap(c => c.elements)
+      .find(e => e.id === elementId);
+
+    const context = [
+      `Slide type: ${slide?.type}`,
+      `Element type: ${element?.type}`,
+      slide?.title ? `Slide title: ${slide.title}` : '',
+      `Project: ${project?.name}`,
+    ].filter(Boolean).join('. ');
+
+    const request: AiRequest = {
+      id: generateId(),
+      elementId,
+      field,
+      currentValue,
+      context,
+      status: 'pending',
+      createdAt: Date.now(),
+    };
+
+    set(state => ({ aiRequests: [...state.aiRequests, request] }));
+  },
+
+  resolveAiRequest: (requestId) => {
+    set(state => ({
+      aiRequests: state.aiRequests.filter(r => r.id !== requestId),
+    }));
+  },
+
+  clearAiRequests: () => set({ aiRequests: [] }),
 
   // ─── Project ───
   createProject: (name: string) => {

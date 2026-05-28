@@ -194,6 +194,18 @@ export interface DeckProject {
   slides: Slide[];
 }
 
+// ─── AI Requests ───
+
+export interface AiRequest {
+  id: string;
+  elementId: string;
+  field: string;           // e.g. 'text', 'title', 'body', 'items'
+  currentValue: string;    // snapshot of the current content
+  context: string;         // slide type, element type, surrounding content for context
+  status: 'pending' | 'processing' | 'done';
+  createdAt: number;
+}
+
 // ─── Settings ───
 
 export interface AppSettings {
