@@ -5,6 +5,10 @@ import { BridgeProvider } from "@/components/providers/BridgeProvider";
 export const metadata: Metadata = {
   title: "Lazer Slides",
   description: "Presentation builder by Lazer Technologies",
+  other: {
+    "claude-bridge": "__lazerSlides",
+    "claude-bridge-docs": "Call window.__lazerSlides.help() for full API documentation. Call window.__lazerSlides.ping() to connect.",
+  },
 };
 
 export default function RootLayout({

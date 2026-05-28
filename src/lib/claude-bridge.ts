@@ -303,9 +303,26 @@ export function initClaudeBridge() {
 
   window.__lazerSlides = bridge;
 
-  // Log availability
+  // Listen for ping messages from the Chrome extension / Claude Code
+  // This enables auto-connect: if Claude is already watching this tab,
+  // it can postMessage to trigger an instant connection.
+  window.addEventListener("message", (event) => {
+    if (event.data?.type === "lazer-slides-ping") {
+      bridge.ping();
+    }
+  });
+
+  // Dispatch a custom event so any listening extension/script knows the bridge is ready
+  window.dispatchEvent(new CustomEvent("lazer-slides-bridge-ready", {
+    detail: { bridge: "__lazerSlides", version: "1.0" },
+  }));
+
+  // Also set a DOM marker that Claude Code can detect when it first inspects the page
+  document.documentElement.setAttribute("data-lazer-slides-bridge", "ready");
+
+  // Log availability — Claude Code sees this in the console
   console.log(
-    "%c🎯 Lazer Slides Bridge ready — call __lazerSlides.help() for docs",
+    "%c🎯 Lazer Slides Bridge ready — call __lazerSlides.help() for docs, __lazerSlides.ping() to connect",
     "color: #ff4da6; font-weight: bold;"
   );
 }
