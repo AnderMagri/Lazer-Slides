@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useDeckStore } from "@/store/deck-store";
 import { Plus, FolderOpen, Sparkle } from "@phosphor-icons/react";
+import { ConnectionModal } from "./ConnectionModal";
 
 export function LandingScreen() {
   const [projectName, setProjectName] = useState("");
   const [showNewForm, setShowNewForm] = useState(false);
+  const [showConnection, setShowConnection] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"create" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const createProject = useDeckStore((s) => s.createProject);
   const loadProject = useDeckStore((s) => s.loadProject);
@@ -17,8 +20,27 @@ export function LandingScreen() {
   };
 
   const handleCreateWithClaude = () => {
-    createProject("New Presentation");
+    if (claudeConnected) {
+      // Already connected — create project directly
+      createProject("New Presentation");
+    } else {
+      // Not connected — show connection modal, then create on connect
+      setPendingAction("create");
+      setShowConnection(true);
+    }
   };
+
+  const handleConnected = useCallback(() => {
+    if (pendingAction === "create") {
+      createProject("New Presentation");
+      setPendingAction(null);
+    }
+  }, [pendingAction, createProject]);
+
+  const handleCloseModal = useCallback(() => {
+    setShowConnection(false);
+    setPendingAction(null);
+  }, []);
 
   const handleLoad = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -30,14 +52,16 @@ export function LandingScreen() {
 
   return (
     <div className="flex-1 flex items-center justify-center min-h-screen bg-fill-1 relative">
-      {/* Claude connection status (top right) */}
-      <div
+      {/* Claude connection button (top right) */}
+      <button
+        onClick={() => {
+          if (!claudeConnected) setShowConnection(true);
+        }}
         className={`absolute top-4 right-4 flex items-center gap-2 h-9 px-3 text-ui-sm transition-all ${
           claudeConnected
-            ? "text-accent-primary bg-accent-primary/10 border border-accent-primary/30"
-            : "text-text-3 bg-fill-2 border border-stroke-1"
+            ? "text-accent-primary bg-accent-primary/10 border border-accent-primary/30 cursor-default"
+            : "text-text-3 bg-fill-2 border border-stroke-1 hover:border-accent-primary hover:text-accent-primary cursor-pointer"
         }`}
-        title={claudeConnected ? "Claude Code is connected via MCP" : "Claude Code not connected"}
       >
         <span className="relative flex items-center justify-center">
           <Sparkle size={16} weight="fill" />
@@ -45,8 +69,8 @@ export function LandingScreen() {
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
           )}
         </span>
-        {claudeConnected ? "Claude connected" : "Claude offline"}
-      </div>
+        {claudeConnected ? "Claude connected" : "Connect Claude"}
+      </button>
 
       <div className="flex flex-col items-center gap-8 max-w-md w-full px-6">
         {/* Logo */}
@@ -97,6 +121,14 @@ export function LandingScreen() {
           </div>
         )}
       </div>
+
+      {/* Connection modal */}
+      {showConnection && (
+        <ConnectionModal
+          onClose={handleCloseModal}
+          onConnected={handleConnected}
+        />
+      )}
     </div>
   );
 }
