@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useDeckStore } from "@/store/deck-store";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "@phosphor-icons/react";
@@ -15,38 +16,56 @@ import {
   UserCircle,
   Star,
   Hash,
+  ListBullets,
+  ListNumbers,
 } from "@phosphor-icons/react";
-import type { SlideElement } from "@/types/deck";
+import type { SlideElement, ElementCategory } from "@/types/deck";
+import { ELEMENT_CATEGORIES } from "@/types/deck";
 
-const ELEMENT_OPTIONS: {
-  type: SlideElement["type"];
-  label: string;
-  icon: React.ReactNode;
-}[] = [
-  { type: "heading", label: "Heading", icon: <TextH size={24} /> },
-  { type: "body-text", label: "Body", icon: <TextAlignLeft size={24} /> },
-  { type: "quote", label: "Quote", icon: <Quotes size={24} /> },
-  { type: "stat", label: "Stat", icon: <Hash size={24} /> },
-  { type: "image", label: "Image", icon: <Image size={24} /> },
-  { type: "divider", label: "Divider", icon: <Minus size={24} /> },
-  {
-    type: "spacer",
-    label: "Spacer",
-    icon: <ArrowsOutLineVertical size={24} />,
-  },
-  { type: "card", label: "Card", icon: <Cards size={24} /> },
-  { type: "chart", label: "Chart", icon: <ChartBar size={24} /> },
-  { type: "person-card", label: "Person", icon: <UserCircle size={24} /> },
-  { type: "icon-text", label: "Icon+Text", icon: <Star size={24} /> },
-];
+const ELEMENT_ICONS: Record<SlideElement["type"], React.ReactNode> = {
+  heading: <TextH size={22} />,
+  "body-text": <TextAlignLeft size={22} />,
+  quote: <Quotes size={22} />,
+  stat: <Hash size={22} />,
+  "bullet-list": <ListBullets size={22} />,
+  "numbered-list": <ListNumbers size={22} />,
+  image: <Image size={22} />,
+  card: <Cards size={22} />,
+  chart: <ChartBar size={22} />,
+  "person-card": <UserCircle size={22} />,
+  "icon-text": <Star size={22} />,
+  divider: <Minus size={22} />,
+  spacer: <ArrowsOutLineVertical size={22} />,
+};
+
+const ELEMENT_LABELS: Record<SlideElement["type"], string> = {
+  heading: "Heading",
+  "body-text": "Body",
+  quote: "Quote",
+  stat: "Stat",
+  "bullet-list": "Bullets",
+  "numbered-list": "Numbers",
+  image: "Image",
+  card: "Card",
+  chart: "Chart",
+  "person-card": "Person",
+  "icon-text": "Icon+Text",
+  divider: "Divider",
+  spacer: "Spacer",
+};
+
+const TAB_ORDER: ElementCategory[] = ["text", "media", "layout"];
 
 export function ElementPalette() {
   const showElementPalette = useDeckStore((s) => s.showElementPalette);
   const targetColumnId = useDeckStore((s) => s.targetColumnId);
   const addElement = useDeckStore((s) => s.addElement);
   const closeElementPalette = useDeckStore((s) => s.closeElementPalette);
+  const [activeTab, setActiveTab] = useState<ElementCategory>("text");
 
   if (!targetColumnId) return null;
+
+  const currentTypes = ELEMENT_CATEGORIES[activeTab].types;
 
   return (
     <AnimatePresence>
@@ -61,40 +80,60 @@ export function ElementPalette() {
             className="fixed inset-0 bg-alt-3 z-40"
           />
 
-          {/* Sheet */}
+          {/* Full-width bottom bar (D) */}
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 400 }}
-            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-fill-2 border border-stroke-1 rounded-t-2xl shadow-elevation-3 z-50"
+            className="fixed bottom-0 left-0 right-0 bg-fill-2 border-t border-stroke-1 shadow-elevation-3 z-50"
           >
             {/* Handle */}
             <div className="flex justify-center pt-2 pb-1">
               <div className="w-10 h-1 rounded-full bg-fill-5" />
             </div>
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pb-3">
-              <h3 className="text-h3 text-text-1">Elements</h3>
+            {/* Header + Tabs */}
+            <div className="flex items-center justify-between px-6 pb-2">
+              <div className="flex items-center gap-6">
+                <h3 className="text-h3 text-text-1">Elements</h3>
+
+                {/* Category tabs (J) */}
+                <div className="flex items-center gap-1 bg-fill-1 p-1 border border-stroke-1">
+                  {TAB_ORDER.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setActiveTab(cat)}
+                      className={`px-3 py-1 text-ui-xs font-medium transition-colors ${
+                        activeTab === cat
+                          ? "bg-accent-primary text-text-on-brand"
+                          : "text-text-2 hover:text-text-1 hover:bg-alt-1"
+                      }`}
+                    >
+                      {ELEMENT_CATEGORIES[cat].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button
                 onClick={closeElementPalette}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-text-2 hover:text-text-1 hover:bg-alt-1 transition-colors"
+                className="w-8 h-8 flex items-center justify-center text-text-2 hover:text-text-1 hover:bg-alt-1 transition-colors"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-3 gap-2 px-5 pb-6">
-              {ELEMENT_OPTIONS.map((opt) => (
+            {/* Element grid */}
+            <div className="flex gap-2 px-6 pb-5 flex-wrap">
+              {currentTypes.map((type) => (
                 <button
-                  key={opt.type}
-                  onClick={() => addElement(targetColumnId, opt.type)}
-                  className="flex flex-col items-center gap-2 py-3 px-2 rounded-xl bg-fill-1 border border-stroke-1 shadow-elevation-1 text-text-2 hover:text-accent-primary hover:border-accent-primary transition-all"
+                  key={type}
+                  onClick={() => addElement(targetColumnId, type)}
+                  className="flex flex-col items-center gap-1.5 w-20 py-3 bg-fill-1 border border-stroke-1 shadow-elevation-1 text-text-2 hover:text-accent-primary hover:border-accent-primary transition-all"
                 >
-                  {opt.icon}
-                  <span className="text-ui-xs">{opt.label}</span>
+                  {ELEMENT_ICONS[type]}
+                  <span className="text-ui-xs">{ELEMENT_LABELS[type]}</span>
                 </button>
               ))}
             </div>

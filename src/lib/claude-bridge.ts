@@ -37,6 +37,10 @@ export interface LazerSlidesBridge {
   deleteElement: (elementId: string) => void;
   moveElement: (elementId: string, direction: "up" | "down") => void;
 
+  // Slide type & columns
+  changeSlideType: (slideId: string, newType: "cover" | "title" | "column" | "end") => void;
+  setColumnWidth: (slideId: string, columnIndex: number, delta: number) => void;
+
   // Mode
   setMode: (mode: "landing" | "editor" | "present") => void;
 }
@@ -69,6 +73,8 @@ export function initClaudeBridge() {
     updateSlide: (id, updates) => useDeckStore.getState().updateSlide(id, updates),
     setSlideColumns: (id, cols) => useDeckStore.getState().setSlideColumns(id, cols),
     setActiveSlide: (id) => useDeckStore.getState().setActiveSlide(id),
+    changeSlideType: (id, type) => useDeckStore.getState().changeSlideType(id, type),
+    setColumnWidth: (id, colIdx, delta) => useDeckStore.getState().setColumnWidth(id, colIdx, delta),
 
     addElement: (colId, type) =>
       useDeckStore.getState().addElement(colId, type as never),

@@ -31,7 +31,28 @@ export type ElementType =
   | 'card'
   | 'chart'
   | 'person-card'
-  | 'icon-text';
+  | 'icon-text'
+  | 'bullet-list'
+  | 'numbered-list';
+
+// ─── Element Palette Categories ───
+
+export type ElementCategory = 'text' | 'media' | 'layout';
+
+export const ELEMENT_CATEGORIES: Record<ElementCategory, { label: string; types: ElementType[] }> = {
+  text: {
+    label: 'Text',
+    types: ['heading', 'body-text', 'quote', 'bullet-list', 'numbered-list', 'stat'],
+  },
+  media: {
+    label: 'Media',
+    types: ['image', 'card', 'chart', 'person-card', 'icon-text'],
+  },
+  layout: {
+    label: 'Layout',
+    types: ['divider', 'spacer'],
+  },
+};
 
 // ─── Element Definitions ───
 
@@ -73,7 +94,7 @@ export interface ImageElement extends BaseElement {
   src: string;
   alt: string;
   fit: 'cover' | 'contain' | 'fill';
-  isBackground: boolean; // if true, fills entire column as background
+  isBackground: boolean;
 }
 
 export interface DividerElement extends BaseElement {
@@ -90,6 +111,7 @@ export interface CardElement extends BaseElement {
   type: 'card';
   title: string;
   body: string;
+  image?: string; // optional data URL for card image
 }
 
 export interface ChartElement extends BaseElement {
@@ -112,6 +134,17 @@ export interface IconTextElement extends BaseElement {
   layout: 'horizontal' | 'vertical';
 }
 
+export interface BulletListElement extends BaseElement {
+  type: 'bullet-list';
+  items: string[];
+}
+
+export interface NumberedListElement extends BaseElement {
+  type: 'numbered-list';
+  items: string[];
+  startNumber: number;
+}
+
 export type SlideElement =
   | HeadingElement
   | BodyTextElement
@@ -123,7 +156,9 @@ export type SlideElement =
   | CardElement
   | ChartElement
   | PersonCardElement
-  | IconTextElement;
+  | IconTextElement
+  | BulletListElement
+  | NumberedListElement;
 
 // ─── Column & Slide ───
 
@@ -137,11 +172,12 @@ export interface Slide {
   type: SlideType;
   columns: ColumnCount;
   columnData: SlideColumn[];
-  layoutChosen?: boolean; // true once user picks a column layout
+  columnWidths?: number[]; // percentage widths per column, e.g. [50, 50] or [25, 50, 25]
+  layoutChosen?: boolean;
   // Cover/Title/End specific
   title?: string;
   subtitle?: string;
-  context?: string; // date or additional context
+  context?: string;
   sectionLabel?: string;
   showBadge?: boolean;
   contactInfo?: string;
@@ -156,4 +192,11 @@ export interface DeckProject {
   updatedAt: string;
   version: string;
   slides: Slide[];
+}
+
+// ─── Settings ───
+
+export interface AppSettings {
+  claudeApiKey?: string;
+  claudeConnection: 'api' | 'mcp';
 }

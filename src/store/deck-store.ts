@@ -17,12 +17,17 @@ function createColumn(): SlideColumn {
   return { id: generateId(), elements: [] };
 }
 
+function defaultColumnWidths(columns: ColumnCount): number[] {
+  return Array.from({ length: columns }, () => Math.round(100 / columns));
+}
+
 function createSlide(type: SlideType, columns: ColumnCount = 1): Slide {
   const slide: Slide = {
     id: generateId(),
     type,
     columns,
     columnData: Array.from({ length: columns }, () => createColumn()),
+    columnWidths: defaultColumnWidths(columns),
   };
 
   if (type === 'cover') {
@@ -61,13 +66,17 @@ function createDefaultElement(type: SlideElement['type']): SlideElement {
     case 'spacer':
       return { ...base, type: 'spacer', size: 'md' };
     case 'card':
-      return { ...base, type: 'card', title: 'Card Title', body: 'Card body text' };
+      return { ...base, type: 'card', title: 'Card Title', body: 'Card body text', image: '' };
     case 'chart':
       return { ...base, type: 'chart', chartType: 'bar', data: [{ label: 'A', value: 40 }, { label: 'B', value: 70 }, { label: 'C', value: 55 }] };
     case 'person-card':
       return { ...base, type: 'person-card', name: 'Name', role: 'Role', avatar: '' };
     case 'icon-text':
       return { ...base, type: 'icon-text', icon: 'Star', text: 'Feature description', layout: 'horizontal' };
+    case 'bullet-list':
+      return { ...base, type: 'bullet-list', items: ['First item', 'Second item', 'Third item'] };
+    case 'numbered-list':
+      return { ...base, type: 'numbered-list', items: ['First step', 'Second step', 'Third step'], startNumber: 1 };
     default:
       return { ...base, type: 'heading', text: 'Heading', style: 'h1', showBadge: false, badgeText: '' } as HeadingElement;
   }
@@ -89,7 +98,7 @@ interface EditorState {
 
   // UI state
   showElementPalette: boolean;
-  targetColumnId: string | null; // which column the palette is adding to
+  targetColumnId: string | null;
 
   // Actions — Project
   createProject: (name: string) => void;
@@ -106,6 +115,8 @@ interface EditorState {
   setActiveSlide: (slideId: string) => void;
   updateSlide: (slideId: string, updates: Partial<Slide>) => void;
   setSlideColumns: (slideId: string, columns: ColumnCount) => void;
+  changeSlideType: (slideId: string, newType: SlideType) => void;
+  setColumnWidth: (slideId: string, columnIndex: number, delta: number) => void;
 
   // Actions — Elements
   addElement: (columnId: string, elementType: SlideElement['type']) => void;
@@ -236,11 +247,87 @@ export const useDeckStore = create<EditorState>((set, get) => ({
     const slides = project.slides.map(s => {
       if (s.id !== slideId) return s;
       const columnData = [...s.columnData];
-      // Add new columns if needed
       while (columnData.length < columns) {
         columnData.push(createColumn());
       }
-      return { ...s, columns, columnData: columnData.slice(0, columns), layoutChosen: true };
+      return {
+        ...s,
+        columns,
+        columnData: columnData.slice(0, columns),
+        columnWidths: defaultColumnWidths(columns),
+        layoutChosen: true,
+      };
+    });
+    set({ project: { ...project, slides } });
+  },
+
+  changeSlideType: (slideId: string, newType: SlideType) => {
+    const { project } = get();
+    if (!project) return;
+
+    const slides = project.slides.map(s => {
+      if (s.id !== slideId) return s;
+      // Preserve existing data, add defaults for new type
+      const updated: Slide = { ...s, type: newType };
+      if (newType === 'cover') {
+        updated.title = updated.title || 'Presentation Title';
+        updated.subtitle = updated.subtitle || 'Subtitle goes here';
+        updated.context = updated.context || '';
+      } else if (newType === 'title') {
+        updated.title = updated.title || 'Section Title';
+        updated.subtitle = updated.subtitle || '';
+        updated.sectionLabel = updated.sectionLabel || 'SECTION';
+      } else if (newType === 'end') {
+        updated.title = updated.title || 'Thank You';
+        updated.contactInfo = updated.contactInfo || '';
+      } else if (newType === 'column') {
+        if (!updated.columnData || updated.columnData.length === 0) {
+          updated.columns = 1;
+          updated.columnData = [createColumn()];
+          updated.columnWidths = [100];
+        }
+        updated.layoutChosen = true;
+      }
+      return updated;
+    });
+    set({ project: { ...project, slides }, activeElementId: null });
+  },
+
+  setColumnWidth: (slideId: string, columnIndex: number, delta: number) => {
+    const { project } = get();
+    if (!project) return;
+
+    const slides = project.slides.map(s => {
+      if (s.id !== slideId || s.type !== 'column') return s;
+      const widths = [...(s.columnWidths || defaultColumnWidths(s.columns))];
+      const minWidth = 15; // minimum 15%
+
+      // Apply delta to target column
+      const newWidth = widths[columnIndex] + delta;
+      if (newWidth < minWidth || newWidth > 85) return s;
+
+      // Distribute the delta evenly across other columns
+      const others = widths.length - 1;
+      if (others === 0) return s;
+      const perOther = -delta / others;
+
+      // Check all others can absorb
+      for (let i = 0; i < widths.length; i++) {
+        if (i === columnIndex) continue;
+        if (widths[i] + perOther < minWidth) return s;
+      }
+
+      widths[columnIndex] = newWidth;
+      for (let i = 0; i < widths.length; i++) {
+        if (i !== columnIndex) widths[i] += perOther;
+      }
+
+      // Round to integers
+      const rounded = widths.map(w => Math.round(w));
+      const diff = 100 - rounded.reduce((a, b) => a + b, 0);
+      if (diff !== 0) rounded[0] += diff;
+
+      return { ...s, columnWidths: rounded };
     });
     set({ project: { ...project, slides } });
   },
