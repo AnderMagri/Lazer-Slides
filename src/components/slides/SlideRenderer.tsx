@@ -185,7 +185,10 @@ function ColumnContainer({
         onDrop={isEditor ? handleDrop : undefined}
       >
         {col.elements.map((element, index) => (
-          <div key={element.id}>
+          <div
+            key={element.id}
+            className={element.sizing === "expand" ? "flex-1 flex flex-col min-h-0" : ""}
+          >
             {/* Drop indicator — shows before this element */}
             {isEditor && dropIndex === index && (
               <div className="h-0.5 bg-accent-primary rounded-full mx-1 my-1 transition-all" />
@@ -199,10 +202,10 @@ function ColumnContainer({
                 e.stopPropagation();
                 if (isEditor) setActiveElement(element.id);
               }}
-              className={`shrink-0 relative group ${
+              className={`relative group ${
                 element.sizing === "expand"
                   ? "flex-1 flex flex-col justify-center min-h-0"
-                  : ""
+                  : "shrink-0"
               } ${
                 isEditor
                   ? `cursor-pointer transition-all ${
