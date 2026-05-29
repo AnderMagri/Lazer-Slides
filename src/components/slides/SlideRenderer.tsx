@@ -7,7 +7,7 @@ import { Plus, Warning, ArrowsOutSimple, ArrowsInSimple, Trash, DotsSixVertical,
 import { ElementRenderer } from "./ElementRenderer";
 import { CanvasBackground } from "./CanvasBackground";
 import { useDeckStore as useDeckStoreRaw } from "@/store/deck-store";
-import { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 
 interface Props {
   slide: Slide;
@@ -185,13 +185,10 @@ function ColumnContainer({
         onDrop={isEditor ? handleDrop : undefined}
       >
         {col.elements.map((element, index) => (
-          <div
-            key={element.id}
-            className={element.sizing === "expand" ? "flex-1 flex flex-col min-h-0" : ""}
-          >
+          <React.Fragment key={element.id}>
             {/* Drop indicator — shows before this element */}
             {isEditor && dropIndex === index && (
-              <div className="h-0.5 bg-accent-primary rounded-full mx-1 my-1 transition-all" />
+              <div className="h-0.5 bg-accent-primary rounded-full mx-1 my-1 transition-all shrink-0" />
             )}
             <div
               draggable={isEditor}
@@ -263,7 +260,7 @@ function ColumnContainer({
                 </>
               )}
             </div>
-          </div>
+          </React.Fragment>
         ))}
 
         {/* Drop indicator at end of list */}
